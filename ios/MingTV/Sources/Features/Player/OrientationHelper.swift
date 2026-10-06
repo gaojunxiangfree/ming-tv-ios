@@ -29,12 +29,17 @@ enum OrientationHelper {
 
     private static func apply(lock: UIInterfaceOrientationMask, request mask: UIInterfaceOrientationMask) {
         AppDelegate.orientationLock = lock
-        // 先让系统按新的锁重算支持方向, 再请求几何方向
+        // 先让系统按新的锁重算"支持方向", 再请求几何方向。
+        // 两者同帧下发时, 后到的重算会覆盖方向偏好(实测 (Pu Ll Lr) -> (Pu) 又被翻回),
+        // 中间隔一小段时间可避开这个竞争。
         refresh()
-        guard let scene = activeScene else { return }
-        let prefs = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: mask)
-        scene.requestGeometryUpdate(prefs) { error in
-            NSLog("[MingTV][Orientation] 方向请求被拒 mask=\(mask.rawValue): \(error)")
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 60_000_000)
+            guard let scene = activeScene else { return }
+            let prefs = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: mask)
+            scene.requestGeometryUpdate(prefs) { error in
+                NSLog("[MingTV][Orientation] 方向请求被拒 mask=\(mask.rawValue): \(error)")
+            }
         }
     }
 
