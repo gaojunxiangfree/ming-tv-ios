@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- App Icon 源图: Android 自适应图标 = ic_launcher_background(绿色渐变) + ic_launcher_foreground(电视机) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 108 108">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#065F46"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 满幅渐变底 (iOS 自行裁圆角) -->
+  <rect width="108" height="108" fill="url(#bg)"/>
+
+  <!-- 前景内缩 0.78, 保证裁切后天线与底座完整 -->
+  <g transform="translate(54,54) scale(0.78) translate(-54,-54)">
+    <g fill="none" stroke="#F2FFF7" stroke-width="4" stroke-linecap="round">
+      <path d="M43,36 L33,23"/>
+      <path d="M65,36 L75,23"/>
+      <path d="M54,76 L54,82"/>
+    </g>
+    <path d="M42,84 L66,84" fill="none" stroke="#F2FFF7" stroke-width="5" stroke-linecap="round"/>
+    <rect x="24" y="36" width="60" height="40" rx="6" ry="6"
+          fill="#06301C" stroke="#F2FFF7" stroke-width="4.5"/>
+    <path d="M48,47 L68,55 L48,63 Z" fill="#4ADE80"/>
+  </g>
+</svg>

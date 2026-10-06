@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 由 Android res/drawable/ic_banner.xml 转换而来: Android TV 桌面横幅 (320x180) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="320" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#065F46"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="320" height="180" fill="url(#bg)"/>
+
+  <g fill="none" stroke="#F2FFF7" stroke-width="6" stroke-linecap="round">
+    <path d="M138,55 L120,32"/>
+    <path d="M182,55 L200,32"/>
+    <path d="M160,135 L160,148"/>
+  </g>
+
+  <path d="M136,152 L184,152" fill="none" stroke="#F2FFF7" stroke-width="9" stroke-linecap="round"/>
+
+  <rect x="105" y="55" width="110" height="80" rx="8" ry="8"
+        fill="#06301C" stroke="#F2FFF7" stroke-width="7"/>
+
+  <path d="M142,80 L180,95 L142,110 Z" fill="#4ADE80"/>
+</svg>

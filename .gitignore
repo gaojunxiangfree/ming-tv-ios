@@ -1,0 +1,28 @@
+### macOS / 编辑器 ###
+.DS_Store
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+
+### Swift Package Manager ###
+.build/
+.swiftpm/
+
+### Xcode 构建产物 (按脚本里的 derivedDataPath 分目录) ###
+ios/build/
+ios/build_device/
+DerivedData/
+*.xcarchive
+
+### 签名 / 凭据: 绝不入库 ###
+*.p12
+*.mobileprovision
+*.keystore
+.gh_token
+.gitee_token
+.trae/
+
+### 临时验证产物(脚本 / 日志 / 截图) ###
+*.log
+/appicon-render/
