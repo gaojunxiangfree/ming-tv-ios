@@ -8,8 +8,6 @@ struct HomeView: View {
     @State private var path: [Route] = []
     @State private var showSiteDialog = false
     @State private var playTarget: PlayTarget?
-    /// 尚未移植的功能提示
-    @State private var featureNotice: String?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -27,14 +25,6 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showSiteDialog) {
             SiteDialogView()
-        }
-        .alert("功能待移植", isPresented: Binding(
-            get: { featureNotice != nil },
-            set: { if !$0 { featureNotice = nil } }
-        )) {
-            Button("知道了", role: .cancel) { featureNotice = nil }
-        } message: {
-            Text(featureNotice ?? "")
         }
         .fullScreenCover(item: $playTarget) { target in
             PlayerView(target: target) { updated in
@@ -103,16 +93,15 @@ struct HomeView: View {
 
     private var functionRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            // 顺序与文案照搬 Android activity_home.xml 的 functionBar
+            // 顺序照搬 Android activity_home.xml 的 functionBar
+            // (已去掉「配置」「推送」两项: 依赖本地 HTTP 服务/扫码/局域网推送, iOS 版未实现)
             HStack(spacing: 6) {
                 functionButton("🕐", "历史") { path.append(.history) }
                 functionButton("📺", "直播") { path.append(.live) }
                 functionButton("🔍", "搜索") { path.append(.search) }
-                functionButton("⚙️", "配置") { notImplemented("本地推送配置") }
                 functionButton("🛤️", "线路") { showSiteDialog = true }
                 functionButton("☁️", "网盘") { path.append(.drive) }
                 functionButton("⭐", "收藏") { path.append(.collect) }
-                functionButton("📲", "推送") { notImplemented("局域网推送") }
                 functionButton("⚙️", "设置") { path.append(.settings) }
             }
             .padding(.horizontal, 16)
@@ -124,10 +113,6 @@ struct HomeView: View {
     private func functionButton(_ emoji: String, _ title: String,
                                 action: @escaping () -> Void) -> some View {
         CapsuleButton(title: title, icon: emoji, style: .function, action: action)
-    }
-
-    private func notImplemented(_ name: String) {
-        featureNotice = "「\(name)」在 iOS 版尚未实现。\n安卓版依赖平台能力（本地 HTTP 服务 / 扫码 / 局域网推送），iOS 需要另行实现。"
     }
 
     // MARK: - 分类 Tab
