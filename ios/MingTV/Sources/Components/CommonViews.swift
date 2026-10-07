@@ -48,6 +48,31 @@ struct CapsuleButton: View {
     }
 }
 
+// MARK: - 播放/直播浮层圆形图标按钮
+
+/// 视频浮层上的圆形图标键 (半透明黑底 + 白色图标)。
+///
+/// `size` 默认取 44 —— 苹果 HIG 的最小可点区域, 横屏全屏时按钮做太小会点不中。
+struct RoundIconButton: View {
+    let symbol: String
+    let id: String
+    var size: CGFloat = 44
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size * 0.42, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background(.black.opacity(0.35), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
+    }
+}
+
 // MARK: - 海报卡 (对应 Android: item_vod.xml)
 
 struct PosterCard: View {

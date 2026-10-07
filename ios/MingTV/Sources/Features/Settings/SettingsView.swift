@@ -177,20 +177,37 @@ struct SettingsView: View {
     private func splashSection(_ model: AppModel) -> some View {
         @Bindable var app = model
         return section("开屏页") {
-            Toggle(isOn: $app.splashPoemOn) {
-                Text("显示情话").font(SMFont.small).foregroundStyle(SM.text)
+            Toggle(isOn: $app.splashEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("显示开机页").font(SMFont.small).foregroundStyle(SM.text)
+                    Text("关闭后下次启动直接进入首页").font(SMFont.tiny).foregroundStyle(SM.textDim)
+                }
             }
             .tint(SM.primary)
+            .accessibilityIdentifier("toggle-splash-enabled")
 
-            if app.splashPoemOn {
-                TextEditor(text: $app.splashPoem)
-                    .font(SMFont.small)
-                    .foregroundStyle(SM.text)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 130)
-                    .padding(8)
-                    .background(SM.surfaceLight, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                Text("每行一句，逐行淡入").font(SMFont.tiny).foregroundStyle(SM.textDim)
+            if app.splashEnabled {
+                Divider().overlay(SM.divider)
+
+                Toggle(isOn: $app.splashPoemOn) {
+                    Text("显示情话").font(SMFont.small).foregroundStyle(SM.text)
+                }
+                .tint(SM.primary)
+                .accessibilityIdentifier("toggle-splash-poem")
+
+                if app.splashPoemOn {
+                    TextEditor(text: $app.splashPoem)
+                        .font(SMFont.small)
+                        .foregroundStyle(SM.text)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 130)
+                        .padding(8)
+                        .background(SM.surfaceLight, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    Text("每行一句，逐行淡入").font(SMFont.tiny).foregroundStyle(SM.textDim)
+                }
+            } else {
+                Text("已关闭：启动时不再展示开机页，也不播放心形与情话动画。")
+                    .font(SMFont.tiny).foregroundStyle(SM.textDim)
             }
         }
     }

@@ -31,11 +31,17 @@ struct HomeView: View {
                 playTarget = updated
             }
         }
-        .task(id: app.currentSiteKey) {
-            guard let site = app.currentSite else { return }
+        .task(id: homeLoadKey) {
+            guard app.bootstrapped, let site = app.currentSite else { return }
             await model.load(site: site)
         }
     }
+
+    /// 站点 key + 启动完成态。
+    /// 关掉开机页时首页会比 `bootstrap()` 先出现, 那时站点表还是空的;
+    /// 若只以 `currentSiteKey` 作为 task id, 启动前后它并不变化, 任务不会重跑,
+    /// 首页就会一直空着 —— 所以把完成态并进 id。
+    private var homeLoadKey: String { "\(app.currentSiteKey)|\(app.bootstrapped)" }
 
     // MARK: - 顶栏
 
@@ -140,7 +146,8 @@ struct HomeView: View {
 
     @ViewBuilder
     private var content: some View {
-        if model.loading && model.items.isEmpty {
+        // 关掉开机页时首页会立刻出现, 此时启动流程还没跑完 —— 一并显示加载态, 避免空白
+        if (model.loading || !app.bootstrapped) && model.items.isEmpty {
             LoadingState(text: "正在加载片库…")
         } else if let err = model.error, model.items.isEmpty {
             EmptyState(icon: "wifi.exclamationmark", text: err, actionTitle: "重试") {

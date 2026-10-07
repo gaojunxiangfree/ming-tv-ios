@@ -146,15 +146,22 @@ struct PlayerView: View {
         ZStack {
             PlayerLayerView(player: model.player)
                 .ignoresSafeArea()
-            // 点击层只垫在视频上方、按钮下方: 避免容器手势把顶部按钮的点击吞掉
+
+            // 点击层只垫在视频上方、所有控件下方: 点空白处显示/隐藏控制层。
+            // 注意 ZStack 里后面的视图盖在上面 —— 控件必须排在它之后, 否则点击会被这层吞掉。
             Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture { toggleControls() }
+
+            // 控制层排在顶部条之前(即在其下方): 控制层里那层全屏压暗色原来盖在
+            // 「退出全屏」键上, 把点击全吃掉了 —— 表现就是横屏要连点好几次才转回竖屏。
+            controlsOverlay()
+
             VStack {
                 landscapeTopBar
                 Spacer()
             }
-            controlsOverlay()
+
             if showEpisodes {
                 episodeDrawer
             }
@@ -170,7 +177,7 @@ struct PlayerView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 8) {
                     if model.showControls {
-                        roundButton("xmark", id: "player-close", size: 32) { dismiss() }
+                        RoundIconButton(symbol: "xmark", id: "player-close", size: 36) { dismiss() }
                     }
                     Spacer(minLength: 0)
                 }
@@ -205,18 +212,10 @@ struct PlayerView: View {
 
                 // 底部进度条常驻 + 右下角全屏键 (竖屏下也一直可见, 保证可发现)
                 HStack(spacing: 8) {
-                    Text(timeText(model.position)).font(SMFont.tiny).foregroundStyle(.white)
-                    Slider(value: Binding(
-                        get: { scrubbing ?? model.position },
-                        set: { scrubbing = $0 }
-                    ), in: 0...max(model.duration, 1), onEditingChanged: { editing in
-                        if !editing, let v = scrubbing { model.seek(to: v); scrubbing = nil }
-                    })
-                    .tint(SM.primary)
-                    Text(timeText(model.duration)).font(SMFont.tiny).foregroundStyle(.white)
+                    progressRow()
 
-                    roundButton("arrow.up.left.and.arrow.down.right",
-                                id: "player-enter-fullscreen", size: 32) {
+                    RoundIconButton(symbol: "arrow.up.left.and.arrow.down.right",
+                                    id: "player-enter-fullscreen") {
                         // 转横屏后把控制层显示出来并重置自动隐藏计时
                         model.showControls = true
                         scheduleAutoHide()
@@ -230,17 +229,53 @@ struct PlayerView: View {
         .animation(.easeInOut(duration: 0.2), value: model.showControls)
     }
 
-    private func roundButton(_ symbol: String, id: String,
-                             size: CGFloat = 34, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: size * 0.42, weight: .semibold))
+    // MARK: - 进度条
+
+    /// 左侧=当前进度 (拖动时跟随手指, 而不是还在走动的播放位置) / 右侧=总时长。
+    /// 拖动过程中在滑块上方浮出「当前 / 总」气泡, 快进快退时便于精确对位。
+    private func progressRow() -> some View {
+        HStack(spacing: 8) {
+            Text(timeText(scrubbing ?? model.position))
+                .font(SMFont.tiny)
+                .foregroundStyle(scrubbing == nil ? .white : SM.primary)
+                .monospacedDigit()
+                .accessibilityIdentifier("player-time-current")
+
+            Slider(value: Binding(
+                get: { scrubbing ?? model.position },
+                set: { scrubbing = $0 }
+            ), in: 0...max(model.duration, 1), onEditingChanged: { editing in
+                if !editing, let v = scrubbing { model.seek(to: v); scrubbing = nil }
+            })
+            .tint(SM.primary)
+            .overlay(alignment: .top) { scrubPreview }
+            .accessibilityIdentifier("player-slider")
+
+            Text(timeText(model.duration))
+                .font(SMFont.tiny)
                 .foregroundStyle(.white)
-                .frame(width: size, height: size)
-                .background(.black.opacity(0.35), in: Circle())
+                .monospacedDigit()
+                .accessibilityIdentifier("player-time-total")
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(id)
+    }
+
+    /// 拖动预览气泡。`allowsHitTesting(false)` 是必须的 —— overlay 默认会拦触摸,
+    /// 不关掉会把滑块的拖拽手势挡掉。
+    @ViewBuilder
+    private var scrubPreview: some View {
+        if let v = scrubbing {
+            Text("\(timeText(v)) / \(timeText(model.duration))")
+                .font(SMFont.tiny.weight(.semibold))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+                .fixedSize()
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(.black.opacity(0.78), in: Capsule())
+                .offset(y: -34)
+                .allowsHitTesting(false)
+                .accessibilityIdentifier("scrub-preview")
+        }
     }
 
     // MARK: - 横屏控制层
@@ -249,7 +284,12 @@ struct PlayerView: View {
     private func controlsOverlay() -> some View {
         if model.showControls || model.isLoading || model.errorText != nil {
             ZStack {
-                Color.black.opacity(0.28).ignoresSafeArea()
+                // 压暗层会挡住下面那层点击层, 所以自己也接一次点击 —— 否则控制层可见时
+                // 点空白处没有任何反应。
+                Color.black.opacity(0.28)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { toggleControls() }
 
                 VStack {
                     Spacer()
@@ -284,11 +324,11 @@ struct PlayerView: View {
     /// 横屏顶部条: 退出全屏 / 关闭 / 标题 —— 常驻显示(对齐爱奇艺, 避免控制层隐藏后找不到返回键)
     private var landscapeTopBar: some View {
         HStack(spacing: 10) {
-            roundButton("arrow.down.right.and.arrow.up.left",
-                        id: "player-exit-fullscreen") {
+            RoundIconButton(symbol: "arrow.down.right.and.arrow.up.left",
+                            id: "player-exit-fullscreen") {
                 OrientationHelper.enterPortrait()
             }
-            roundButton("xmark", id: "player-close") { dismiss() }
+            RoundIconButton(symbol: "xmark", id: "player-close") { dismiss() }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(model.title).font(SMFont.small).foregroundStyle(.white).lineLimit(1)
@@ -303,17 +343,7 @@ struct PlayerView: View {
 
     private func bottomControls() -> some View {
         VStack(spacing: 6) {
-            HStack(spacing: 8) {
-                Text(timeText(model.position)).font(SMFont.tiny).foregroundStyle(.white)
-                Slider(value: Binding(
-                    get: { scrubbing ?? model.position },
-                    set: { scrubbing = $0 }
-                ), in: 0...max(model.duration, 1), onEditingChanged: { editing in
-                    if !editing, let v = scrubbing { model.seek(to: v); scrubbing = nil }
-                })
-                .tint(SM.primary)
-                Text(timeText(model.duration)).font(SMFont.tiny).foregroundStyle(.white)
-            }
+            progressRow()
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {

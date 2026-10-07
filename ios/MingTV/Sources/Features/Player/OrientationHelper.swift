@@ -9,8 +9,10 @@ import UIKit
 @MainActor
 enum OrientationHelper {
 
+    /// 转横屏。请求"任意横向"而不是写死 landscapeRight ——
+    /// 写死会出现「画面相对用户转了 90°」: 手机实际是另一个横向方向时系统不会翻转过来。
     static func enterLandscape() {
-        apply(lock: .landscape, request: .landscapeRight)
+        apply(lock: .landscape, request: .landscape)
     }
 
     static func enterPortrait() {
@@ -35,11 +37,34 @@ enum OrientationHelper {
         refresh()
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 60_000_000)
-            guard let scene = activeScene else { return }
-            let prefs = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: mask)
-            scene.requestGeometryUpdate(prefs) { error in
-                NSLog("[MingTV][Orientation] 方向请求被拒 mask=\(mask.rawValue): \(error)")
+            request(mask)
+
+            // 首次请求偶尔仍被系统的"支持方向重算"吃掉, 复查一次: 没转过去就再请求一次。
+            // 这样用户点一下就走完, 不用反复点。
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            if let scene = activeScene, !allows(scene.interfaceOrientation, mask) {
+                refresh()
+                request(mask)
             }
+        }
+    }
+
+    private static func request(_ mask: UIInterfaceOrientationMask) {
+        guard let scene = activeScene else { return }
+        let prefs = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: mask)
+        scene.requestGeometryUpdate(prefs) { error in
+            NSLog("[MingTV][Orientation] 方向请求被拒 mask=\(mask.rawValue): \(error)")
+        }
+    }
+
+    private static func allows(_ orientation: UIInterfaceOrientation,
+                              _ mask: UIInterfaceOrientationMask) -> Bool {
+        switch orientation {
+        case .portrait:           return mask.contains(.portrait)
+        case .portraitUpsideDown: return mask.contains(.portraitUpsideDown)
+        case .landscapeLeft:      return mask.contains(.landscapeLeft)
+        case .landscapeRight:     return mask.contains(.landscapeRight)
+        @unknown default:         return true
         }
     }
 

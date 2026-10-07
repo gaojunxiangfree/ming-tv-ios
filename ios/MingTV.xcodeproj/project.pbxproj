@@ -472,6 +472,7 @@
 		4E2E9FBDE4C0D84D53C7DF88 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.seanming.player.uitests;
 				PRODUCT_NAME = MingTVUITests;
 				TEST_TARGET_NAME = MingTV;
@@ -506,6 +507,7 @@
 		F9FCA9B58A0822E29FE7AF4C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.seanming.player.uitests;
 				PRODUCT_NAME = MingTVUITests;
 				TEST_TARGET_NAME = MingTV;

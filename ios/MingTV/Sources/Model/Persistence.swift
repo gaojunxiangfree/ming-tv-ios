@@ -15,6 +15,8 @@ enum PrefKey {
     static let searchHistory = "search_history"
     static let liveGroupIndex = "live_group_index"
     static let liveChannelIndex = "live_channel_index"
+    /// 开机页总开关 (关闭后冷启动直接进首页)
+    static let splashEnabled = "splash_enabled"
     static let splashPoemOn = "splash_poem_on"
     static let splashPoem = "splash_poem"
     static let splashTTSOn = "splash_tts_on"

@@ -79,3 +79,5 @@ targets:
         PRODUCT_NAME: MingTVUITests
         PRODUCT_BUNDLE_IDENTIFIER: com.seanming.player.uitests
         TEST_TARGET_NAME: MingTV
+        # 真机跑 UI 测试需要签名, 而签名要求 target 有 Info.plist
+        GENERATE_INFOPLIST_FILE: YES

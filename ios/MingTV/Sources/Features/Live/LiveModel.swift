@@ -26,6 +26,8 @@ final class LiveModel: @unchecked Sendable {
     private(set) var playingChannelName = ""
     var httpHeaders: [String: String] = [:]
     private(set) var playError: String?
+    /// 横屏全屏时控制层的显隐 (与播放页一致)
+    var showControls = true
 
     private var timeObserver: Any?
     private var statusObservation: NSKeyValueObservation?
@@ -169,6 +171,13 @@ final class LiveModel: @unchecked Sendable {
     func playCurrent() {
         guard let ch = currentChannel else { return }
         play(ch)
+    }
+
+    /// 同组内切上一台 / 下一台 (横屏全屏时用, 循环)
+    func stepChannel(_ delta: Int) {
+        guard let g = currentGroup, !g.channels.isEmpty else { return }
+        let count = g.channels.count
+        selectChannel(((selectedChannelIndex + delta) % count + count) % count)
     }
 
     func play(_ channel: LiveChannel) {

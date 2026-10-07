@@ -17,6 +17,9 @@ final class AppModel {
 
     private(set) var configLoading = false
     private(set) var configError: String?
+    /// 启动流程是否已跑完 (站点表已就绪).
+    /// 关掉开机页时首页会先于 `bootstrap()` 出现, 需要据此判断能否取站点。
+    private(set) var bootstrapped = false
 
     // MARK: 收藏 / 历史 / 搜索历史
 
@@ -40,6 +43,10 @@ final class AppModel {
     var playlistLayout: String {
         didSet { Persistence.set(PrefKey.playlistLayout, playlistLayout) }
     }
+    /// 开机页总开关 (默认开启; 关闭后冷启动直接进首页)
+    var splashEnabled: Bool {
+        didSet { Persistence.set(PrefKey.splashEnabled, splashEnabled) }
+    }
     var splashPoemOn: Bool {
         didSet { Persistence.set(PrefKey.splashPoemOn, splashPoemOn) }
     }
@@ -57,6 +64,7 @@ final class AppModel {
         loopEnabled = Persistence.bool(PrefKey.loopEnabled, default: false)
         adFilterEnabled = Persistence.bool(PrefKey.adFilter, default: true)
         playlistLayout = Persistence.string(PrefKey.playlistLayout, default: "grid")
+        splashEnabled = Persistence.bool(PrefKey.splashEnabled, default: true)
         splashPoemOn = Persistence.bool(PrefKey.splashPoemOn, default: true)
         splashPoem = Persistence.string(PrefKey.splashPoem, default: Self.defaultPoem)
     }
@@ -70,6 +78,7 @@ final class AppModel {
 
     /// 启动流程: 优先已保存接口源, 失败回退内置已验证 CMS 源
     func bootstrap() async {
+        defer { bootstrapped = true }
         loadLocal()
         if !apiURL.isEmpty {
             await loadConfig(from: apiURL)
