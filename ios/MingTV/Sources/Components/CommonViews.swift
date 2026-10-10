@@ -73,6 +73,66 @@ struct RoundIconButton: View {
     }
 }
 
+// MARK: - 进度滑块 (播放页/直播)
+
+/// 自定义进度条: 小圆点 thumb + 拖动中实时回调。
+///
+/// 为什么不用 SwiftUI `Slider`:
+/// 1. 默认 thumb 过大, 播放页上会挡住画面;
+/// 2. 拖动时值更新有延迟, 时间文本/气泡不跟手。
+/// 这里用 UIKit `UISlider` 的 `valueChanged`(连续) 回调, thumb 换成 14pt 小圆点。
+struct ProgressSlider: UIViewRepresentable {
+    @Binding var value: Double
+    var range: ClosedRange<Double>
+    var tint: UIColor
+    var onEditingChanged: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> UISlider {
+        let slider = UISlider()
+        slider.minimumValue = Float(range.lowerBound)
+        slider.maximumValue = Float(range.upperBound)
+        slider.minimumTrackTintColor = tint
+        slider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.35)
+        slider.setThumbImage(Self.thumbImage(), for: .normal)
+        slider.setThumbImage(Self.thumbImage(), for: .highlighted)
+        slider.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
+        slider.addTarget(context.coordinator, action: #selector(Coordinator.began(_:)), for: .touchDown)
+        slider.addTarget(context.coordinator, action: #selector(Coordinator.ended(_:)),
+                         for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        return slider
+    }
+
+    func updateUIView(_ uiView: UISlider, context: Context) {
+        if uiView.minimumValue != Float(range.lowerBound) { uiView.minimumValue = Float(range.lowerBound) }
+        if uiView.maximumValue != Float(range.upperBound) { uiView.maximumValue = Float(range.upperBound) }
+        uiView.value = Float(value)
+    }
+
+    /// 14pt 小白圆点, 略加描边避免白底上看不清
+    private static func thumbImage() -> UIImage {
+        let size: CGFloat = 14
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+        return renderer.image { _ in
+            let oval = UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: size, height: size))
+            UIColor.white.setFill()
+            oval.fill()
+            UIColor.black.withAlphaComponent(0.2).setStroke()
+            oval.lineWidth = 0.5
+            oval.stroke()
+        }
+    }
+
+    final class Coordinator: NSObject {
+        var parent: ProgressSlider
+        init(_ parent: ProgressSlider) { self.parent = parent }
+        @objc func valueChanged(_ sender: UISlider) { parent.value = Double(sender.value) }
+        @objc func began(_ sender: UISlider) { parent.onEditingChanged(true) }
+        @objc func ended(_ sender: UISlider) { parent.onEditingChanged(false) }
+    }
+}
+
 // MARK: - 海报卡 (对应 Android: item_vod.xml)
 
 struct PosterCard: View {

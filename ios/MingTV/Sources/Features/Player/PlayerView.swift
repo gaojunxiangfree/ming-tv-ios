@@ -15,6 +15,8 @@ struct PlayerView: View {
     @State private var showAudioPicker = false
     @State private var hideTask: Task<Void, Never>?
     @State private var scrubbing: Double?
+    /// 当前方向, 用于决定控制层自动隐藏时长(竖屏 10s / 横屏 5s)
+    @State private var isPortrait = true
 
     /// 音轨按钮文案: 未选择时只显示"音轨"
     private var audioTitle: String {
@@ -29,6 +31,8 @@ struct PlayerView: View {
                 if portrait { portraitLayout(geo) } else { landscapeLayout(geo) }
             }
                 .background { Color.black.ignoresSafeArea() }
+                .onAppear { isPortrait = portrait }
+                .onChange(of: portrait) { _, newValue in isPortrait = newValue }
         }
         .statusBarHidden()
         .task {
@@ -38,7 +42,7 @@ struct PlayerView: View {
                               speed: app.playSpeed,
                               loop: app.loopEnabled,
                               adFilterEnabled: app.adFilterEnabled)
-            scheduleAutoHide()
+            scheduleAutoHide(seconds: 10)
         }
         .sheet(isPresented: $showAudioPicker) { audioPicker }
         .onDisappear {
@@ -172,58 +176,63 @@ struct PlayerView: View {
 
     private var portraitVideoOverlay: some View {
         ZStack {
+            // 点击层垫底: 点空白显示/隐藏控制层 (竖屏 10s 自动隐藏后点屏幕唤起)
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { toggleControls() }
+
             Color.black.opacity(model.showControls ? 0.22 : 0)
 
-            VStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    if model.showControls {
+            if model.showControls {
+                VStack(spacing: 0) {
+                    HStack(spacing: 8) {
                         RoundIconButton(symbol: "xmark", id: "player-close", size: 36) { dismiss() }
+                        Spacer(minLength: 0)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 10)
+
                     Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
 
-                Spacer(minLength: 0)
-
-                if model.isLoading {
-                    ProgressView().tint(.white)
-                } else if let err = model.errorText {
-                    VStack(spacing: 6) {
-                        Text(err)
-                            .font(SMFont.tiny).foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                        Button("重试") { model.reload() }
-                            .font(SMFont.tiny).foregroundStyle(SM.primary)
+                    if model.isLoading {
+                        ProgressView().tint(.white)
+                    } else if let err = model.errorText {
+                        VStack(spacing: 6) {
+                            Text(err)
+                                .font(SMFont.tiny).foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                            Button("重试") { model.reload() }
+                                .font(SMFont.tiny).foregroundStyle(SM.primary)
+                        }
+                        .padding(.horizontal, 16)
+                    } else {
+                        Button { model.togglePlay() } label: {
+                            Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 54, height: 54)
+                                .background(.black.opacity(0.32), in: Circle())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 16)
-                } else if model.showControls {
-                    Button { model.togglePlay() } label: {
-                        Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 54, height: 54)
-                            .background(.black.opacity(0.32), in: Circle())
+
+                    Spacer(minLength: 0)
+
+                    // 底部进度条 + 右下角全屏键, 随控制层一起隐藏
+                    HStack(spacing: 8) {
+                        progressRow()
+
+                        RoundIconButton(symbol: "arrow.up.left.and.arrow.down.right",
+                                        id: "player-enter-fullscreen") {
+                            // 转横屏后把控制层显示出来并重置自动隐藏计时
+                            model.showControls = true
+                            scheduleAutoHide()
+                            OrientationHelper.enterLandscape()
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 10)
                 }
-
-                Spacer(minLength: 0)
-
-                // 底部进度条常驻 + 右下角全屏键 (竖屏下也一直可见, 保证可发现)
-                HStack(spacing: 8) {
-                    progressRow()
-
-                    RoundIconButton(symbol: "arrow.up.left.and.arrow.down.right",
-                                    id: "player-enter-fullscreen") {
-                        // 转横屏后把控制层显示出来并重置自动隐藏计时
-                        model.showControls = true
-                        scheduleAutoHide()
-                        OrientationHelper.enterLandscape()
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 10)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: model.showControls)
@@ -241,16 +250,20 @@ struct PlayerView: View {
                 .monospacedDigit()
                 .accessibilityIdentifier("player-time-current")
 
-            Slider(value: Binding(
-                get: { scrubbing ?? model.position },
-                set: { scrubbing = $0 }
-            ), in: 0...max(model.duration, 1), onEditingChanged: { editing in
-                if !editing, let v = scrubbing { model.seek(to: v); scrubbing = nil }
-            })
-            .tint(SM.primary)
+            ProgressSlider(
+                value: Binding(
+                    get: { scrubbing ?? model.position },
+                    set: { scrubbing = $0 }
+                ),
+                range: 0...max(model.duration, 1),
+                tint: UIColor(SM.primary),
+                onEditingChanged: { editing in
+                    if !editing, let v = scrubbing { model.seek(to: v); scrubbing = nil }
+                }
+            )
+            .frame(height: 28)
             .overlay(alignment: .top) { scrubPreview }
             .accessibilityIdentifier("player-slider")
-
             Text(timeText(model.duration))
                 .font(SMFont.tiny)
                 .foregroundStyle(.white)
@@ -491,13 +504,17 @@ struct PlayerView: View {
 
     private func toggleControls() {
         withAnimation(.easeInOut(duration: 0.2)) { model.showControls.toggle() }
-        scheduleAutoHide()
+        scheduleAutoHide(seconds: model.showControls ? autoHideAfter : 0)
     }
 
-    private func scheduleAutoHide() {
+    /// 控制层自动隐藏计时。竖屏 10s, 横屏 5s(对齐爱奇艺/腾讯)。
+    private var autoHideAfter: Double { isPortrait ? 10 : 5 }
+
+    private func scheduleAutoHide(seconds: Double = 5) {
         hideTask?.cancel()
+        let delay = seconds
         hideTask = Task {
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             if Task.isCancelled { return }
             withAnimation(.easeInOut(duration: 0.25)) { model.showControls = false }
         }
